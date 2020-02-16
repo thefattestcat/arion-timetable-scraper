@@ -18,8 +18,12 @@ const sleep = async (ms) => {
 
 const port = process.env.PORT || 7000;
 
+const paperSearchURL = 'https://arion.aut.ac.nz/ArionMain/CourseInfo/Information/Qualifications/PaperSearch.aspx';
+
 const URL = "localhost:" + port;
 const table = __dirname + "/table.html";
+
+var papers = ['COMP601', 'COMP717'];
 
 (async () => {
 
@@ -32,16 +36,47 @@ const table = __dirname + "/table.html";
     });
 
     const page = await browser.newPage();
-    
-    await page.goto(URL, {
-        waitUntil: 'networkidle2'
-    })
 
-    let pageData = await page.evaluate( async () => {
-        let months = document.querySelectorAll("#month");
-    })
-    
-    console.log("done");
+    for(var i = 0; i < papers.length; i++) {
+        let paperCode = papers[i];
+
+        console.log(`Paper: ${paperCode}`);
+
+        await page.goto(paperSearchURL, {
+            waitUntil: 'networkidle2'
+        })
+
+        await page.waitForSelector('input#wucControl_txtPaperSearch');
+        await page.type('input#wucControl_txtPaperSearch', paperCode);
+        await page.click('input#wucControl_cmdPaperSearch');
+        await page.waitForSelector('tbody');
+        await page.click('a#wucControl_repPaperSearch__ctl1_hypCode');
+        await page.waitForSelector('table');
+
+        let pageData = await page.evaluate( async () => {
+            let tables = document.querySelectorAll('table');
+            console.log(tables)
+            let index = 0;
+            let data = {};
+            tables.forEach(table => {
+                console.log('tables: ' + index);
+                if(index == 0) {
+                    data.details = [];
+                    let td = table.querySelectorAll('td');
+                    console.log('td:' + td);
+                    td.forEach( element => {
+                        console.log(element)
+                        if(!element.firstChild) data.details.push(element.firstChild.innerHTML);
+                    })
+                } else if(index == 1) {
+                    data.requisites = {}
+                }
+                index++;
+            })
+        return data;
+        })
+        console.dir(pageData)
+    }
 
 })();
 
